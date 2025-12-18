@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: veterans_site
+    ports:
+      - "5000:5000"
+    volumes:
+      # База данных сохраняется на хосте
+      - ./data:/app/data
+      # Папка с видео пробрасывается внутрь
+      - ./app/static/videos:/app/static/videos
+    restart: unless-stopped

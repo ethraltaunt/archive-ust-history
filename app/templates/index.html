@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Архив устной истории</title>
+    <!-- Tailwind CSS (для стилей) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Шрифты (Serif для заголовков как на скрине) -->
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F9F7F2; /* Бежевый фон */ }
+        h1, h2, h3, .serif-font { font-family: 'Merriweather', serif; }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- HEADER -->
+    <header class="bg-[#F9F7F2] border-b border-gray-200 sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <!-- Логотип и слоган -->
+            <div>
+                <h1 class="text-4xl font-bold text-gray-900 serif-font">Архив устной истории</h1>
+                <p class="text-gray-500 mt-1 text-sm tracking-wide">Сохраняя истории наших героев</p>
+            </div>
+
+            <!-- Поиск и Кнопка -->
+            <div class="flex items-center gap-4 w-full md:w-auto">
+                <form action="/" method="get" class="relative w-full md:w-80">
+                    <input type="hidden" name="category" value="{{ current_category }}">
+                    <input type="text" name="q" value="{{ search_query }}"
+                           class="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#C2410C]"
+                           placeholder="Поиск ветеранов, историй...">
+                    <button type="submit" class="absolute right-3 top-2.5 text-gray-400 hover:text-[#C2410C]">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </button>
+                </form>
+                
+                <a href="/add" class="bg-[#C2410C] hover:bg-[#9a3412] text-white px-5 py-2 rounded-md font-medium transition shadow-sm whitespace-nowrap">
+                    + Добавить
+                </a>
+            </div>
+        </div>
+
+        <!-- НАВИГАЦИЯ (ВКЛАДКИ) -->
+        <div class="bg-white border-t border-gray-200">
+            <div class="container mx-auto px-6">
+                <nav class="flex space-x-8 overflow-x-auto">
+                    {% set tabs = [
+                        ('all', 'Все записи'),
+                        ('ww2', 'Великая Отечественная'),
+                        ('afghan', 'Афганистан'),
+                        ('chechnya', 'Чечня'),
+                        ('svo', 'СВО'),
+                        ('other', 'Другое')
+                    ] %}
+                    
+                    {% for code, label in tabs %}
+                        <a href="/?category={{ code }}{% if search_query %}&q={{ search_query }}{% endif %}" 
+                           class="py-4 text-sm font-medium border-b-2 transition whitespace-nowrap
+                                  {% if current_category == code %}
+                                    border-[#C2410C] text-[#C2410C]
+                                  {% else %}
+                                    border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300
+                                  {% endif %}">
+                            {{ label }}
+                        </a>
+                    {% endfor %}
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="container mx-auto px-6 py-10">
+        
+        <div class="flex justify-between items-end mb-8">
+            <div>
+                <h2 class="text-3xl font-bold text-gray-900 serif-font">
+                    {% if current_category == 'ww2' %}Ветераны ВОВ
+                    {% elif current_category == 'afghan' %}Война в Афганистане
+                    {% elif current_category == 'chechnya' %}Чеченские кампании
+                    {% elif current_category == 'svo' %}Участники СВО
+                    {% else %}Все записи архива{% endif %}
+                </h2>
+                <p class="text-gray-500 mt-2">{{ videos|length }} записанных свидетельств</p>
+            </div>
+            
+            <!-- Сортировка (визуальная) -->
+            <div class="hidden md:flex gap-2">
+                <button class="p-2 bg-[#C2410C] text-white rounded"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16m-7 6h7"></path></svg></button>
+                <button class="p-2 bg-white text-gray-500 border rounded"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg></button>
+            </div>
+        </div>
+
+        <!-- VIDEO GRID -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {% for video in videos %}
+            <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition overflow-hidden border border-gray-100 flex flex-col h-full">
+                
+                            <!-- Thumbnail -->
+                <div class="relative aspect-video bg-gray-200 group">
+                    
+                    {% if video.type == 'youtube' %}
+                        <!-- 1. YouTube -->
+                        <img src="https://img.youtube.com/vi/{{ video.path }}/mqdefault.jpg" class="w-full h-full object-cover" alt="cover">
+                    
+                    {% elif video.thumbnail_path %}
+                        <!-- 2. Есть картинка в базе (сгенерированная или ссылка) -->
+                        {% if video.thumbnail_path.startswith('http') %}
+                            <!-- Это внешняя ссылка (вставленная вручную) -->
+                            <img src="{{ video.thumbnail_path }}" class="w-full h-full object-cover" alt="cover">
+                        {% else %}
+                            <!-- Это локальный файл (сгенерированный FFmpeg) -->
+                            <img src="{{ url_for('static', filename='thumbnails/' + video.thumbnail_path) }}" class="w-full h-full object-cover" alt="cover">
+                        {% endif %}
+
+                    {% else %}
+                        <!-- 3. Заглушка (если ничего нет) -->
+                        <div class="w-full h-full flex items-center justify-center bg-gray-300 text-gray-500">
+                            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        </div>
+                    {% endif %}
+                    
+                    <span class="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded capitalize">
+                        {{ video.type }}
+                    </span>
+                    
+                    <!-- Overlay Play Button -->
+                    <a href="/video/{{ video.id }}" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-20 transition">
+                        <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100 transition">
+                            <svg class="w-5 h-5 text-[#C2410C] ml-1" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" /></svg>
+                        </div>
+                    </a>
+                </div>
+                    
+
+                <!-- Card Body -->
+                <div class="p-5 flex flex-col flex-grow">
+                    <h3 class="text-xl font-bold text-gray-900 serif-font leading-tight">{{ video.person_name }}</h3>
+                    <p class="text-sm text-gray-600 mt-1 mb-3 line-clamp-2">{{ video.title }}</p>
+                    
+                    <!-- Snippet (Поиск) -->
+                    {% if video.snippet %}
+                        <p class="text-xs text-gray-500 mb-4 bg-yellow-50 p-2 rounded border border-yellow-100">
+                            ...{{ video.snippet|safe }}...
+                        </p>
+                    {% endif %}
+
+                    <div class="mt-auto flex items-center justify-between pt-4 border-t border-gray-100">
+                        <span class="text-xs text-gray-400">{{ video.created_at[:10] }}</span>
+                        <a href="/video/{{ video.id }}" class="bg-[#C2410C] hover:bg-[#9a3412] text-white text-sm px-4 py-2 rounded transition">
+                            Смотреть
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-span-full text-center py-20">
+                <p class="text-gray-500 text-lg">В этой категории пока нет записей.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-[#2D2D2A] text-white py-12 mt-10">
+        <div class="container mx-auto px-6 grid md:grid-cols-3 gap-8">
+            <div>
+                <h4 class="text-xl serif-font text-[#C2410C] mb-4">Archive of Memories</h4>
+                <p class="text-gray-400 text-sm leading-relaxed">
+                    Сохраняя свидетельства и истории наших ветеранов для будущих поколений. Каждая история имеет значение.
+                </p>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-gray-200">Разделы</h4>
+                <ul class="space-y-2 text-sm text-gray-400">
+                    <li><a href="/?category=ww2" class="hover:text-white transition">Великая Отечественная</a></li>
+                    <li><a href="/?category=afghan" class="hover:text-white transition">Афганистан</a></li>
+                    <li><a href="/?category=chechnya" class="hover:text-white transition">Чечня</a></li>
+                    <li><a href="/?category=svo" class="hover:text-white transition">СВО</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-gray-200">Контакты</h4>
+                <p class="text-gray-400 text-sm">Москва, Россия</p>
+                <p class="text-gray-400 text-sm mt-2">archive@memories.org</p>
+            </div>
+        </div>
+        <div class="container mx-auto px-6 mt-10 pt-6 border-t border-gray-700 text-center text-xs text-gray-500">
+            © 2024 Archive of Memories. All rights reserved.
+        </div>
+    </footer>
+
+</body>
+</html>

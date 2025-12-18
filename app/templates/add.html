@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Добавить интервью</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                
+                <div class="card shadow border-0">
+                    <div class="card-header bg-primary text-white py-3">
+                        <h4 class="mb-0">Добавление новой записи</h4>
+                    </div>
+                    <div class="card-body p-4">
+                        
+                        <form method="post">
+                            <!-- Блок 1: Информация -->
+                             
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Заголовок интервью</label>
+                                <input type="text" name="title" class="form-control" required placeholder="Например: Воспоминания о работе в тылу (1941-1945)">
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">ФИО Ветерана / Героя</label>
+                                <input type="text" name="person_name" class="form-control" required placeholder="Иванов Иван Иванович">
+                            </div>
+                            
+                            <hr class="my-4">
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Категория конфликта</label>
+                                <select name="category" class="form-select" required>
+                                    <option value="ww2">Великая Отечественная Война (ВОВ)</option>
+                                    <option value="afghan">Война в Афганистане</option>
+                                    <option value="chechnya">Чеченские кампании</option>
+                                    <option value="svo">Специальная военная операция (СВО)</option>
+                                    <option value="other">Другое / Труженики тыла</option>
+                                </select>
+                            </div>
+                            <!-- Блок 2: Источник видео -->
+                            <h5 class="mb-3">Настройка видео</h5>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-5">
+                                    <label class="form-label">Тип источника</label>
+                                    <select name="type" class="form-select" id="sourceType" onchange="updatePlaceholder()">
+                                        <option value="youtube">YouTube (ID)</option>
+                                        <option value="local">Локальный файл (Local)</option>
+                                        <option value="embed">Код вставки (Embed)</option>
+                                        <option value="direct">Прямая ссылка (URL)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-7">
+                                    <label class="form-label">Путь / Ссылка / Код</label>
+                                    <input type="text" name="path" class="form-control" id="pathInput" required placeholder="dQw4w9WgXcQ">
+                                    <div class="mb-4">
+                                    <label class="form-label">Ссылка на обложку (Опционально)</label>
+                                    <input type="text" name="manual_thumbnail" class="form-control" placeholder="https://example.com/image.jpg">
+                                    <div class="form-text">
+                                        Оставьте пустым для авто-генерации (работает для Локальных видео и Прямых ссылок).
+                                        <br><strong>Для VK/Rutube (Embed)</strong> лучше вставить ссылку на картинку вручную.
+                                    </div>
+                                </div>
+
+                                <hr class="my-4">
+                                    <div class="form-text text-primary" id="pathHelp">Вставьте ID видео с YouTube.</div>
+                                </div>
+                            </div>
+
+                            <hr class="my-4">
+
+
+
+                            <!-- Кнопки -->
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <a href="/" class="btn btn-outline-secondary me-md-2">Отмена</a>
+                                <button type="submit" class="btn btn-success px-5">Сохранить в базу</button>
+                            </div>
+                        </form>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Скрипт для динамической подсказки -->
+    <script>
+        function updatePlaceholder() {
+            const type = document.getElementById('sourceType').value;
+            const input = document.getElementById('pathInput');
+            const help = document.getElementById('pathHelp');
+            
+            if (type === 'youtube') {
+                input.placeholder = "dQw4w9WgXcQ";
+                help.innerText = "Только ID видео (символы после v=). Пример: dQw4w9WgXcQ";
+            } else if (type === 'local') {
+                input.placeholder = "interview_01.mp4";
+                help.innerText = "Имя файла в папке 'app/static/videos'. Пример: veteran.mp4";
+            } else if (type === 'direct') {
+                input.placeholder = "https://site.com/video.mp4";
+                help.innerText = "Полная ссылка на файл. Должна заканчиваться на .mp4";
+            } else if (type === 'embed') {
+                input.placeholder = '<iframe src="..." ...></iframe>';
+                help.innerText = "Вставьте полный HTML код <iframe> из VK, RuTube или Дзен.";
+            }
+        }
+        // Запустить один раз при загрузке
+        updatePlaceholder();
+    </script>
+</body>
+</html>

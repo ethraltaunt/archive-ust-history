@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ video.title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F9F7F2; }
+        .serif-font { font-family: 'Merriweather', serif; }
+        .transcript-text { white-space: pre-wrap; font-size: 1rem; line-height: 1.7; color: #374151; }
+    </style>
+</head>
+<body class="text-gray-800 min-h-screen flex flex-col">
+
+    <!-- HEADER -->
+    <nav class="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shadow-sm sticky top-0 z-50">
+        <a href="/" class="flex items-center text-gray-500 hover:text-gray-900 transition font-medium group">
+            <svg class="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Назад в Архив
+        </a>
+        <div class="flex items-center text-[#B45309] font-bold serif-font text-lg">
+            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"/></svg>
+            Living Museum
+        </div>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <main class="container mx-auto px-4 md:px-6 py-8 flex-grow">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- LEFT COLUMN (Video + Info) - Takes 8 columns on large screens -->
+            <div class="lg:col-span-8">
+                
+                <!-- VIDEO PLAYER CONTAINER -->
+                <!-- Класс pb-[56.25%] создает идеальное соотношение 16:9 -->
+                <div class="relative w-full pb-[56.25%] bg-black rounded-xl overflow-hidden shadow-lg mb-6">
+                    
+                    {% if video.type == 'local' %}
+                        <video controls class="absolute top-0 left-0 w-full h-full object-contain">
+                            <source src="{{ url_for('static', filename='videos/' + video.path) }}" type="video/mp4">
+                            Ваш браузер не поддерживает видео.
+                        </video>
+
+                    {% elif video.type == 'youtube' %}
+                        <iframe class="absolute top-0 left-0 w-full h-full" 
+                                src="https://www.youtube.com/embed/{{ video.path }}" 
+                                frameborder="0" allowfullscreen>
+                        </iframe>
+
+                    {% elif video.type == 'direct' %}
+                        <video controls class="absolute top-0 left-0 w-full h-full object-contain">
+                            <source src="{{ video.path }}" type="video/mp4">
+                        </video>
+
+                    {% elif video.type == 'embed' %}
+                        <!-- Для Embed кодов мы создаем flex контейнер -->
+                        <div class="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black">
+                            {{ video.path|safe }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- INFO BLOCK -->
+                <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+                    <h1 class="text-3xl font-bold serif-font text-gray-900 mb-6 leading-tight">
+                        {{ video.title }}
+                    </h1>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-12 border-t border-gray-100 py-6">
+                        <div>
+                            <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Герой интервью</p>
+                            <p class="text-lg font-medium text-gray-900">{{ video.person_name }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Категория</p>
+                            <p class="text-lg font-medium text-gray-900">
+                                {% if video.category == 'ww2' %}Великая Отечественная
+                                {% elif video.category == 'afghan' %}Афганистан
+                                {% elif video.category == 'chechnya' %}Чеченская война
+                                {% elif video.category == 'svo' %}СВО
+                                {% else %}Другое{% endif %}
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Дата</p>
+                            <p class="text-base text-gray-700">{{ video.created_at[:10] }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Источник</p>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 capitalize">
+                                {{ video.type }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- DELETE BUTTON AREA -->
+                    <div class="mt-4 pt-6 border-t border-gray-100">
+                        <form action="/delete/{{ video.id }}" method="post" onsubmit="return confirm('Вы уверены? Это действие нельзя отменить.');">
+                            <button type="submit" class="flex items-center text-[#C2410C] hover:text-[#9a3412] font-medium transition text-sm">
+                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                Удалить запись из архива
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN (Transcript) - Takes 4 columns -->
+            <div class="lg:col-span-4 sticky top-24">
+                <div class="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col h-[calc(100vh-8rem)]">
+                    <div class="px-5 py-4 border-b border-gray-100 bg-gray-50 rounded-t-xl flex items-center">
+                        <svg class="w-5 h-5 text-[#C2410C] mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H8z" clip-rule="evenodd"/></svg>
+                        <h3 class="font-bold serif-font text-gray-800">Стенограмма</h3>
+                    </div>
+                    
+                    <div class="p-6 overflow-y-auto flex-grow custom-scroll">
+                        {% if video.transcript %}
+                            <div class="transcript-text font-serif">
+                                {{ video.transcript }}
+                            </div>
+                        {% else %}
+                            <div class="flex flex-col items-center justify-center h-40 text-gray-400 text-center">
+                                <p class="text-sm">Текст стенограммы отсутствует.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="px-4 py-2 bg-gray-50 border-t border-gray-100 rounded-b-xl text-[10px] text-gray-400 text-center uppercase tracking-widest">
+                        Архив Памяти • Verbatim Record
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</body>
+</html>
