@@ -292,7 +292,20 @@ def logout():
     session.pop('logged_in', None)
     return redirect(url_for('index'))
 
-
+@app.route('/fix_thumbs')
+@login_required
+def fix_thumbs():
+    conn = get_db()
+    videos = conn.execute("SELECT * FROM videos WHERE type='local' AND (thumbnail_path IS NULL OR thumbnail_path = '')").fetchall()
+    count = 0
+    for v in videos:
+        thumb = generate_thumbnail('local', v['path'], v['id'])
+        if thumb:
+            conn.execute('UPDATE videos SET thumbnail_path = ? WHERE id = ?', (thumb, v['id']))
+            count += 1
+    conn.commit()
+    conn.close()
+    return f"Сгенерировано обложек: {count}. <a href='/'>На главную</a>"
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
