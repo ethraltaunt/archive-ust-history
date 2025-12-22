@@ -29,9 +29,9 @@ COLAB_URL = "https://nonintoxicating-maynard-superobediently.ngrok-free.dev"
 # Если ты на локалке -> вставь сюда свой Ngrok (http://xxxx.ngrok.io)
 # Если на сервере -> вставь IP или домен (http://1.2.3.4:5000)
 # 'localhost' работать НЕ будет, так как Colab не знает, где твой localhost.
-MY_SITE_PUBLIC_URL = "https://твоя-ссылка-на-этот-сайт.ngrok-free.app" 
+MY_SITE_PUBLIC_URL = "http://архивустнойистории.рф" 
 
-ADMIN_PASSWORD = "admin"
+ADMIN_PASSWORD = "admin73"
 app.secret_key = 'super_secret_key_change_me' 
 
 
