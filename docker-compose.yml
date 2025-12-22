@@ -11,4 +11,5 @@ services:
       - ./data:/app/data
       # Папка с видео пробрасывается внутрь
       - ./app/static/videos:/app/static/videos
+      - ./app/static/thumbnails:/app/static/thumbnails
     restart: unless-stopped
