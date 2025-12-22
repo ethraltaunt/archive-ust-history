@@ -3,14 +3,82 @@ import sqlite3
 import subprocess # Нужен для запуска FFmpeg
 import requests
 import re
-from flask import Flask, render_template, request, redirect, url_for, g, jsonify
+from flask import Flask, render_template, request, redirect, url_for, g, jsonify, session, flash
+from functools import wraps 
+
 
 app = Flask(__name__)
 DB_PATH = '/app/data/veterans.db'
 COLAB_URL = "https://nonintoxicating-maynard-superobediently.ngrok-free.dev"
-# Папка, куда сохраняем картинки
+MY_SITE_PUBLIC_URL = 'localhost'
 THUMBNAIL_FOLDER = '/app/static/thumbnails'
 os.makedirs(THUMBNAIL_FOLDER, exist_ok=True)
+ADMIN_PASSWORD = "admin"
+app.secret_key = 'super_secret_key_change_me' 
+
+# --- НОВЫЙ WEBHOOK: Colab сам пришлет сюда текст ---
+@app.route('/api/callback', methods=['POST'])
+def receive_transcript():
+    try:
+        # 1. Получаем данные
+        data = request.json
+        # Мы передадим video_id (наш ID в базе), чтобы точно знать, кого обновлять
+        video_id = data.get('video_id') 
+        transcript = data.get('text')
+        status = data.get('status')
+        
+        print(f"\n[WEBHOOK] Получен сигнал от Colab для видео {video_id}, статус: {status}")
+
+        if not video_id:
+            return jsonify({"error": "No video_id provided"}), 400
+
+        conn = get_db()
+        
+        if status == 'done' and transcript:
+            # Сохраняем текст в базу
+            conn.execute('UPDATE videos SET transcript = ? WHERE id = ?', (transcript, video_id))
+            conn.commit()
+            print(f"[WEBHOOK] ✅ Видео {video_id}: Текст сохранен в базу!")
+            
+        elif status == 'error':
+            error_msg = f"Ошибка обработки: {data.get('error_msg')}"
+            conn.execute('UPDATE videos SET transcript = ? WHERE id = ?', (error_msg, video_id))
+            conn.commit()
+            print(f"[WEBHOOK] ❌ Видео {video_id}: Получена ошибка.")
+
+        conn.close()
+        return jsonify({"message": "OK, data received"}), 200
+
+    except Exception as e:
+        print(f"[WEBHOOK ERROR] {e}")
+        return jsonify({"error": str(e)}), 500
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# --- 4. РОУТЫ ВХОДА И ВЫХОДА ---
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    error = None
+    if request.method == 'POST':
+        if request.form['password'] == ADMIN_PASSWORD:
+            session['logged_in'] = True
+            # Если пользователь хотел попасть на конкретную страницу, вернем его туда
+            next_url = request.args.get('next')
+            return redirect(next_url or url_for('index'))
+        else:
+            error = 'Неверный пароль'
+    return render_template('login.html', error=error)
+
+@app.route('/logout')
+def logout():
+    session.pop('logged_in', None)
+    return redirect(url_for('index'))
 
 def get_clean_colab_url():
     """Удаляет невидимые пробелы и мусор из ссылки"""
@@ -137,63 +205,17 @@ def index():
 @app.route('/video/<int:video_id>')
 def video_page(video_id):
     conn = get_db()
-    video_row = conn.execute('SELECT * FROM videos WHERE id = ?', (video_id,)).fetchone()
-    
-    if not video_row:
-        return "Видео не найдено", 404
-
-    video_data = dict(video_row)
-    
-    # ПРОВЕРКА ОБНОВЛЕНИЯ (Обернута в защиту, чтобы не было Error 500)
-    try:
-        current_text = video_data.get('transcript')
-        task_id = video_data.get('colab_task_id')
-        
-        # Если текста нет, но есть задача
-        if not current_text and task_id and COLAB_URL:
-            
-            # --- ЯДЕРНАЯ ЧИСТКА ССЫЛКИ ---
-            # 1. Удаляем все невидимые символы через кодировку
-            # Это удалит вообще всё, что не является стандартным текстом
-            clean_url = COLAB_URL.encode('ascii', 'ignore').decode('ascii').strip()
-            # 2. Убираем слэш в конце, если есть
-            clean_url = clean_url.rstrip('/')
-            
-            full_link = f"{clean_url}/api/status/{task_id}"
-            print(f"[DEBUG] ЧИСТАЯ ССЫЛКА: {full_link}")
-            
-            # Запрос (тайм-аут 60 сек, без SSL)
-            response = requests.get(full_link, timeout=60, verify=False)
-            
-            if response.status_code == 200:
-                result = response.json()
-                status = result.get('status')
-                
-                if status == 'done':
-                    new_text = result.get('text')
-                    # Обновляем БД
-                    conn.execute('UPDATE videos SET transcript = ? WHERE id = ?', (new_text, video_id))
-                    conn.commit()
-                    video_data['transcript'] = new_text
-                    print("✅ ТЕКСТ ПОЛУЧЕН!")
-                elif status == 'error':
-                    err = f"Ошибка Colab: {result.get('text')}"
-                    conn.execute('UPDATE videos SET transcript = ? WHERE id = ?', (err, video_id))
-                    conn.commit()
-                    video_data['transcript'] = err
-            else:
-                print(f"Colab ответил кодом: {response.status_code}")
-
-    except Exception as e:
-        # Если случилась ошибка, мы не роняем сайт, а пишем её в консоль
-        print(f"⚠️ ОШИБКА ПРИ ОБНОВЛЕНИИ: {e}")
-        # Можно даже вывести её на экран временно, чтобы ты увидел:
-        # return f"ОШИБКА: {e}", 500 
-
+    video = conn.execute('SELECT * FROM videos WHERE id = ?', (video_id,)).fetchone()
     conn.close()
-    return render_template('video.html', video=video_data)
+    
+    if not video:
+        return "Видео не найдено", 404
+        
+    # Никаких requests! Просто отдаем то, что есть.
+    return render_template('video.html', video=video)
 
 @app.route('/delete/<int:video_id>', methods=['POST'])
+@login_required
 def delete_video(video_id):
     conn = get_db()
     conn.execute('DELETE FROM videos WHERE id = ?', (video_id,))
@@ -201,6 +223,7 @@ def delete_video(video_id):
     return redirect(url_for('index'))
 
 @app.route('/add', methods=['GET', 'POST'])
+@login_required
 def add_video():
     if request.method == 'POST':
         print("\n--- НАЧИНАЮ ДОБАВЛЕНИЕ ВИДЕО ---") # ЛОГ
@@ -229,30 +252,19 @@ def add_video():
         print(f"Видео сохранено в БД под ID: {new_video_id}") # ЛОГ
         
         # 2. Отправка в Colab
-        if v_type != 'local':
-            if COLAB_URL:
-                print(f"Попытка отправки запроса на {COLAB_URL}/api/task ...") # ЛОГ
-                try:
-                    payload = {"url": path}
-                    response = requests.post(f"{COLAB_URL}/api/task", json=payload, timeout=10)
-                    
-                    print(f"Код ответа Colab: {response.status_code}") # ЛОГ
-                    print(f"Тело ответа: {response.text}") # ЛОГ
+        MY_SITE_PUBLIC_URL = "https://твоя-ссылка.ngrok-free.app" # <-- ТВОЙ ВНЕШНИЙ АДРЕС
 
-                    if response.status_code == 200:
-                        data = response.json()
-                        task_id = data.get('task_id')
-                        cursor.execute('UPDATE videos SET colab_task_id = ? WHERE id = ?', (task_id, new_video_id))
-                        print(f"УСПЕХ! ID задачи: {task_id}")
-                    else:
-                        print("ОШИБКА: Colab ответил не 200")
-                        
-                except Exception as e:
-                    print(f"КРИТИЧЕСКАЯ ОШИБКА СОЕДИНЕНИЯ: {e}")
-            else:
-                print("ПРОПУСК: Переменная COLAB_URL пустая!")
-        else:
-            print("ПРОПУСК: Видео локальное, Colab не нужен.")
+        if v_type != 'local' and COLAB_URL:
+            try:
+                task_payload = {
+                    "url": path,
+                    "video_id": new_video_id, # Отправляем НАШ ID
+                    "callback_url": f"{MY_SITE_PUBLIC_URL}/api/callback" # Куда вернуть ответ
+                }
+                requests.post(f"{COLAB_URL}/api/task", json=task_payload, timeout=2)
+                print("Задача отправлена (Push mode)")
+            except:
+                pass
 
         conn.commit()
         conn.close()
@@ -264,6 +276,7 @@ def add_video():
 # --- API ДЛЯ GOOGLE COLAB ---
 
 @app.route('/api/upload', methods=['POST'])
+@login_required
 def api_upload():
     try:
         data = request.json

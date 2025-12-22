@@ -37,10 +37,22 @@
                         </svg>
                     </button>
                 </form>
-                
-                <a href="/add" class="bg-[#C2410C] hover:bg-[#9a3412] text-white px-5 py-2 rounded-md font-medium transition shadow-sm whitespace-nowrap">
-                    + Добавить
-                </a>
+    
+                {% if session.logged_in %}
+                    <!-- Если Админ: показываем Добавить и Выйти -->
+                    <a href="/add" class="bg-[#C2410C] hover:bg-[#9a3412] text-white px-4 py-2 rounded-md font-medium text-sm transition whitespace-nowrap">
+                        + Запись
+                    </a>
+                    <a href="/logout" class="text-gray-500 hover:text-gray-900 text-sm font-medium">
+                        Выйти
+                    </a>
+                {% else %}
+                    <!-- Если Гость: показываем Войти (иконка ключа) -->
+                    <a href="/login" class="text-gray-400 hover:text-[#C2410C] transition" title="Вход для администратора">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
+                    </a>
+                {% endif %}
+            </div>
             </div>
         </div>
 
@@ -169,7 +181,7 @@
     <footer class="bg-[#2D2D2A] text-white py-12 mt-10">
         <div class="container mx-auto px-6 grid md:grid-cols-3 gap-8">
             <div>
-                <h4 class="text-xl serif-font text-[#C2410C] mb-4">Archive of Memories</h4>
+                <h4 class="text-xl serif-font text-[#C2410C] mb-4">Архив устной истории</h4>
                 <p class="text-gray-400 text-sm leading-relaxed">
                     Сохраняя свидетельства и истории наших ветеранов для будущих поколений. Каждая история имеет значение.
                 </p>
@@ -189,9 +201,7 @@
                 <p class="text-gray-400 text-sm mt-2">archive@memories.org</p>
             </div>
         </div>
-        <div class="container mx-auto px-6 mt-10 pt-6 border-t border-gray-700 text-center text-xs text-gray-500">
-            © 2024 Archive of Memories. All rights reserved.
-        </div>
+
     </footer>
 
 </body>

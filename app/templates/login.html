@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Вход в систему</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F9F7F2; }
+        .serif-font { font-family: 'Merriweather', serif; }
+    </style>
+</head>
+<body class="h-screen flex items-center justify-center">
+
+    <div class="bg-white p-8 rounded-xl shadow-lg border border-gray-200 w-full max-w-md">
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-bold serif-font text-gray-900">Вход для администратора</h1>
+            <p class="text-gray-500 text-sm mt-2">Архив Памяти</p>
+        </div>
+
+        {% if error %}
+        <div class="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm border border-red-100">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="post">
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Пароль</label>
+                <input type="password" name="password" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#C2410C] transition" required autofocus>
+            </div>
+            
+            <button type="submit" class="w-full bg-[#C2410C] hover:bg-[#9a3412] text-white font-bold py-3 rounded transition duration-200">
+                Войти
+            </button>
+        </form>
+        
+        <div class="text-center mt-6">
+            <a href="/" class="text-gray-400 hover:text-gray-600 text-sm">Вернуться на главную</a>
+        </div>
+    </div>
+
+</body>
+</html>
