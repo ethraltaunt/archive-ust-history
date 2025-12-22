@@ -296,16 +296,67 @@ def logout():
 @login_required
 def fix_thumbs():
     conn = get_db()
-    videos = conn.execute("SELECT * FROM videos WHERE type='local' AND (thumbnail_path IS NULL OR thumbnail_path = '')").fetchall()
-    count = 0
+    # Ищем все локальные видео
+    videos = conn.execute("SELECT * FROM videos WHERE type='local'").fetchall()
+    
+    log = []
+    success_count = 0
+    
+    # Проверка папок
+    if not os.path.exists(VIDEOS_DIR):
+        return f"КРИТИЧЕСКАЯ ОШИБКА: Папка видео не найдена внутри Docker: {VIDEOS_DIR}"
+    
+    if not os.path.exists(THUMBNAIL_FOLDER):
+        try:
+            os.makedirs(THUMBNAIL_FOLDER)
+            log.append(f"Папка thumbnails создана: {THUMBNAIL_FOLDER}")
+        except Exception as e:
+            return f"КРИТИЧЕСКАЯ ОШИБКА: Не могу создать папку thumbnails: {e}"
+
+    log.append(f"Всего локальных видео в базе: {len(videos)}")
+    
     for v in videos:
-        thumb = generate_thumbnail('local', v['path'], v['id'])
-        if thumb:
-            conn.execute('UPDATE videos SET thumbnail_path = ? WHERE id = ?', (thumb, v['id']))
-            count += 1
+        # Полный путь к видео
+        full_video_path = os.path.join(VIDEOS_DIR, v['path'])
+        
+        # Проверяем, существует ли файл
+        if not os.path.exists(full_video_path):
+            log.append(f"❌ Файл не найден: {full_video_path} (ID: {v['id']})")
+            continue
+            
+        # Пробуем генерировать
+        try:
+            thumb_filename = f"thumb_{v['id']}.jpg"
+            output_file = os.path.join(THUMBNAIL_FOLDER, thumb_filename)
+            
+            cmd = [
+                'ffmpeg', '-y', 
+                '-ss', '00:00:05', 
+                '-i', full_video_path, 
+                '-vframes', '1', 
+                '-q:v', '2', 
+                output_file
+            ]
+            
+            # Запускаем и ловим ошибку
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                # Успех, пишем в базу
+                conn.execute('UPDATE videos SET thumbnail_path = ? WHERE id = ?', (thumb_filename, v['id']))
+                success_count += 1
+                log.append(f"✅ ОК: {v['title']}")
+            else:
+                log.append(f"⚠️ Ошибка FFmpeg для {v['title']}: {result.stderr[:100]}...") # Показываем ошибку
+                
+        except Exception as e:
+            log.append(f"❌ Ошибка Python: {str(e)}")
+
     conn.commit()
     conn.close()
-    return f"Сгенерировано обложек: {count}. <a href='/'>На главную</a>"
+    
+    # Выводим отчет на экран
+    return "<br>".join(log) + f"<br><br><b>Итого обновлено: {success_count}</b>. <a href='/'>На главную</a>"
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
