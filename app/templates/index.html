@@ -113,39 +113,29 @@
             <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition overflow-hidden border border-gray-100 flex flex-col h-full">
                 
                             <!-- Thumbnail -->
+                                <!-- Thumbnail -->
                 <div class="relative aspect-video bg-gray-200 group">
                     
                     {% if video.type == 'youtube' %}
-                        <!-- 1. YouTube -->
                         <img src="https://img.youtube.com/vi/{{ video.path }}/mqdefault.jpg" class="w-full h-full object-cover" alt="cover">
                     
                     {% elif video.thumbnail_path %}
-                        <!-- 2. Есть картинка в базе (сгенерированная или ссылка) -->
+                        <!-- Если путь начинается с http (ручная ссылка) -->
                         {% if video.thumbnail_path.startswith('http') %}
-                            <!-- Это внешняя ссылка (вставленная вручную) -->
                             <img src="{{ video.thumbnail_path }}" class="w-full h-full object-cover" alt="cover">
+                        <!-- Иначе это локальный файл -->
                         {% else %}
-                            <!-- Это локальный файл (сгенерированный FFmpeg) -->
                             <img src="{{ url_for('static', filename='thumbnails/' + video.thumbnail_path) }}" class="w-full h-full object-cover" alt="cover">
                         {% endif %}
-
+                    
                     {% else %}
-                        <!-- 3. Заглушка (если ничего нет) -->
+                        <!-- Заглушка -->
                         <div class="w-full h-full flex items-center justify-center bg-gray-300 text-gray-500">
-                            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            <span class="text-xs">Нет фото</span>
                         </div>
                     {% endif %}
                     
-                    <span class="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded capitalize">
-                        {{ video.type }}
-                    </span>
-                    
-                    <!-- Overlay Play Button -->
-                    <a href="/video/{{ video.id }}" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-20 transition">
-                        <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100 transition">
-                            <svg class="w-5 h-5 text-[#C2410C] ml-1" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" /></svg>
-                        </div>
-                    </a>
+                    <!-- ... остальные элементы (кнопка play и т.д.) ... -->
                 </div>
                     
 
