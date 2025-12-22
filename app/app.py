@@ -220,14 +220,14 @@ def add_video():
         conn = get_db()
         cursor = conn.cursor()
         
-        # 1. Сохраняем основную запись
+        # 1. Сохраняем в базу
         cursor.execute('''
             INSERT INTO videos (title, person_name, category, type, path, transcript, thumbnail_path, colab_task_id, source_name) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
             (title, person_name, category, v_type, path, transcript, manual_thumb, None, source_name))
         
         new_id = cursor.lastrowid
-        conn.commit() # Важно закоммитить, чтобы видео получило ID
+        conn.commit()
 
         # 2. ГЕНЕРАЦИЯ ОБЛОЖКИ (Если нет ручной)
         final_thumb = manual_thumb
@@ -237,14 +237,23 @@ def add_video():
                 cursor.execute('UPDATE videos SET thumbnail_path = ? WHERE id = ?', (generated, new_id))
                 conn.commit()
 
-        # 3. ОТПРАВКА В COLAB (Если нет текста и это не локальное видео)
-        if not transcript and v_type != 'local' and COLAB_URL:
+        # 3. ОТПРАВКА В COLAB (Если нет текста)
+        # Мы убрали проверку "v_type != local", теперь отправляем ВСЕ, если есть Colab URL
+        if not transcript and COLAB_URL:
             try:
-                # Отправляем задачу в режиме Webhook (чтобы Colab сам вернул ответ)
+                task_url = path # По умолчанию (для youtube/embed)
+                
+                # 🔥 ЕСЛИ ВИДЕО ЛОКАЛЬНОЕ -> ПРЕВРАЩАЕМ В ССЫЛКУ 🔥
+                if v_type == 'local':
+                    # Убедись, что MY_SITE_PUBLIC_URL задан верно (без слэша в конце)
+                    # Формируем ссылку: https://твой-сайт.рф/static/videos/video.mp4
+                    task_url = f"{MY_SITE_PUBLIC_URL}/static/videos/{path}"
+                    print(f"Локальное видео, сформирована ссылка для Colab: {task_url}")
+
                 task_payload = {
-                    "url": path,
-                    "video_id": new_id, # Наш ID
-                    "callback_url": f"{MY_SITE_PUBLIC_URL}/api/callback" # Куда стучаться обратно
+                    "url": task_url,
+                    "video_id": new_id, 
+                    "callback_url": f"{MY_SITE_PUBLIC_URL}/api/callback"
                 }
                 
                 print(f"Отправка задачи в Colab...")
@@ -257,7 +266,6 @@ def add_video():
         return redirect(url_for('index'))
         
     return render_template('add.html')
-
 
 @app.route('/delete/<int:video_id>', methods=['POST'])
 @login_required
@@ -284,21 +292,7 @@ def logout():
     session.pop('logged_in', None)
     return redirect(url_for('index'))
 
-# --- СЛУЖЕБНЫЙ РОУТ ДЛЯ ПОЧИНКИ КАРТИНОК ---
-@app.route('/fix_thumbs')
-@login_required
-def fix_thumbs():
-    conn = get_db()
-    videos = conn.execute("SELECT * FROM videos WHERE type='local' AND (thumbnail_path IS NULL OR thumbnail_path = '')").fetchall()
-    count = 0
-    for v in videos:
-        thumb = generate_thumbnail('local', v['path'], v['id'])
-        if thumb:
-            conn.execute('UPDATE videos SET thumbnail_path = ? WHERE id = ?', (thumb, v['id']))
-            count += 1
-    conn.commit()
-    conn.close()
-    return f"Сгенерировано обложек: {count}. <a href='/'>На главную</a>"
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
