@@ -43,34 +43,48 @@
                             </div>
                             <!-- Блок 2: Источник видео -->
                             <h5 class="mb-3">Настройка видео</h5>
+                                                        <!-- ... Блок с типом видео ... -->
                             <div class="row g-3 mb-4">
-                                <div class="col-md-5">
-                                    <label class="form-label">Тип источника</label>
+                                <div class="col-md-4">
+                                    <label class="form-label">Тип (Технический)</label>
                                     <select name="type" class="form-select" id="sourceType" onchange="updatePlaceholder()">
                                         <option value="youtube">YouTube (ID)</option>
-                                        <option value="local">Локальный файл (Local)</option>
-                                        <option value="embed">Код вставки (Embed)</option>
-                                        <option value="direct">Прямая ссылка (URL)</option>
+                                        <option value="embed">Embed код</option>
+                                        <option value="direct">Прямая ссылка</option>
+                                        <option value="local">Локальный файл</option>
                                     </select>
                                 </div>
-                                <div class="col-md-7">
+                                <div class="col-md-8">
                                     <label class="form-label">Путь / Ссылка / Код</label>
-                                    <input type="text" name="path" class="form-control" id="pathInput" required placeholder="dQw4w9WgXcQ">
-                                    <div class="mb-4">
-                                    <label class="form-label">Ссылка на обложку (Опционально)</label>
-                                    <input type="text" name="manual_thumbnail" class="form-control" placeholder="https://example.com/image.jpg">
-                                    <div class="form-text">
-                                        Оставьте пустым для авто-генерации (работает для Локальных видео и Прямых ссылок).
-                                        <br><strong>Для VK/Rutube (Embed)</strong> лучше вставить ссылку на картинку вручную.
-                                    </div>
-                                </div>
-
-                                <hr class="my-4">
-                                    <div class="form-text text-primary" id="pathHelp">Вставьте ID видео с YouTube.</div>
+                                    <input type="text" name="path" class="form-control" id="pathInput" required>
                                 </div>
                             </div>
 
+                            <!-- НОВОЕ ПОЛЕ: НАЗВАНИЕ ИСТОЧНИКА -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Название источника (Отображается на сайте)</label>
+                                <input type="text" name="source_name" class="form-control" placeholder="Например: YouTube канал 'История РФ' или 'Архив ВГТРК'" required>
+                            </div>
+                            
+                            <!-- ПОЛЕ КАРТИНКИ (Оставляем как было) -->
+                            <div class="mb-4">
+                                <label class="form-label">Ссылка на обложку (Опционально)</label>
+                                <input type="text" name="manual_thumbnail" class="form-control" placeholder="https://...">
+                            </div>
+
                             <hr class="my-4">
+
+                            <!-- СТЕНОГРАММА -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Стенограмма</label>
+                                <div class="form-text text-success mb-2">
+                                    <i class="bi bi-check-circle"></i> Если вы вставите текст сюда, <strong>запрос в Colab отправляться НЕ будет</strong>.
+                                    Оставьте пустым, чтобы запустить AI-распознавание.
+                                </div>
+                                <textarea name="transcript" class="form-control" rows="12" placeholder="Текст интервью..."></textarea>
+                            </div>
+                            
+                            
 
 
 

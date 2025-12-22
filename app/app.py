@@ -114,19 +114,20 @@ def init_db():
             category TEXT,
             type TEXT NOT NULL,
             path TEXT NOT NULL,
-            thumbnail_path TEXT,
             transcript TEXT,
-            colab_task_id TEXT, -- НОВОЕ ПОЛЕ: Номер задачи в Colab
+            thumbnail_path TEXT,
+            colab_task_id TEXT,
+            source_name TEXT,  -- НОВОЕ ПОЛЕ: Красивое название источника
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    
+    # ... (остальной код FTS и триггеров без изменений) ...
     c.execute('''
         CREATE VIRTUAL TABLE IF NOT EXISTS videos_fts 
         USING fts5(title, transcript, person_name, content='videos', content_rowid='id')
     ''')
-    
     c.execute('CREATE TRIGGER IF NOT EXISTS videos_ai AFTER INSERT ON videos BEGIN INSERT INTO videos_fts(rowid, title, transcript, person_name) VALUES (new.id, new.title, new.transcript, new.person_name); END;')
+    
     conn.commit()
     conn.close()
 
@@ -226,54 +227,57 @@ def delete_video(video_id):
 @login_required
 def add_video():
     if request.method == 'POST':
-        print("\n--- НАЧИНАЮ ДОБАВЛЕНИЕ ВИДЕО ---") # ЛОГ
-        
         title = request.form['title']
         person_name = request.form['person_name']
         category = request.form['category']
         v_type = request.form['type']
         path = request.form['path']
+        transcript = request.form['transcript'].strip() # Убираем пробелы по краям
         manual_thumb = request.form.get('manual_thumbnail', '').strip()
+        source_name = request.form['source_name'] # Получаем красивое имя источника
         
-        # ЛОГ
-        print(f"Тип видео: {v_type}")
-        print(f"Адрес Colab: {COLAB_URL}")
-
         conn = get_db()
         cursor = conn.cursor()
         
-        # 1. Сохраняем в базу
+        # Сохраняем видео. task_id пока None.
         cursor.execute('''
-            INSERT INTO videos (title, person_name, category, type, path, transcript, thumbnail_path, colab_task_id) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
-            (title, person_name, category, v_type, path, '', manual_thumb, None))
+            INSERT INTO videos (title, person_name, category, type, path, transcript, thumbnail_path, colab_task_id, source_name) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+            (title, person_name, category, v_type, path, transcript, manual_thumb, None, source_name))
         
         new_video_id = cursor.lastrowid
-        print(f"Видео сохранено в БД под ID: {new_video_id}") # ЛОГ
         
-        # 2. Отправка в Colab
-        MY_SITE_PUBLIC_URL = "https://твоя-ссылка.ngrok-free.app" # <-- ТВОЙ ВНЕШНИЙ АДРЕС
-
-        if v_type != 'local' and COLAB_URL:
+        # ЛОГИКА: Отправляем в Colab ТОЛЬКО если текст пустой И это не локальный файл
+        if not transcript and v_type != 'local' and COLAB_URL:
             try:
-                task_payload = {
-                    "url": path,
-                    "video_id": new_video_id, # Отправляем НАШ ID
-                    "callback_url": f"{MY_SITE_PUBLIC_URL}/api/callback" # Куда вернуть ответ
-                }
-                requests.post(f"{COLAB_URL}/api/task", json=task_payload, timeout=2)
-                print("Задача отправлена (Push mode)")
-            except:
-                pass
+                # Адрес для Webhook (если используешь Push-режим)
+                # MY_SITE_PUBLIC_URL = "https://твоя-ссылка.ngrok-free.app" 
+                
+                print(f"Отправка задачи в Colab для видео {new_video_id}...")
+                
+                # Если используешь простой режим (как мы отладили последним):
+                response = requests.post(
+                    f"{COLAB_URL}/api/task", 
+                    json={"url": path}, 
+                    timeout=5
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    task_id = data.get('task_id')
+                    cursor.execute('UPDATE videos SET colab_task_id = ? WHERE id = ?', (task_id, new_video_id))
+                    print(f"Задача ушла в Colab. ID: {task_id}")
+            except Exception as e:
+                print(f"Ошибка связи с Colab: {e}")
+        else:
+            print("Colab пропущен (либо есть текст, либо локальное видео).")
 
         conn.commit()
         conn.close()
         
-        print("--- ЗАВЕРШЕНО ---\n")
         return redirect(url_for('index'))
         
     return render_template('add.html')
-# --- API ДЛЯ GOOGLE COLAB ---
 
 @app.route('/api/upload', methods=['POST'])
 @login_required
